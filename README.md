@@ -20,7 +20,9 @@ The game's array will look like the following:
 Each field of the Array will be a game object which contains a certain state. Depending on the state of the field, different things will happen:
 * Space : Player is allowed to land on that space and continues his movement
 * Wall: Player is not allowed to land on that space, his movement stops
-# Class diagram
+
+# Diagrams
+## Class diagram
 ```mermaid
 ---
 config:
@@ -35,8 +37,8 @@ direction TB
     }
 
     class IStaticObject {
-        IMovableObject: containedObject
-        requestAssignMovableObject(object: IMovableObject) : Boolean
+        containedObject: Option[IMovableObject]
+        requestAssignMovableObject(object: IMovableObject) Boolean
     }
 
     class IMovableObject {
@@ -72,6 +74,9 @@ direction TB
     Space ..|> IStaticObject
     Player ..|> IMovableObject
 ```
+This diagram represents the initial structure of game elements. 
+
+**All elements must inherit from the ``GameObject`` abstract class**
 
 # Git workflow
 This development of this project is [trunk-based](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development)

@@ -2,6 +2,8 @@ package `abstract`
 
 import classes.Position
 
-abstract class GameObject() {
-  val position: Position = new Position()
+import java.awt.Color
+
+abstract class GameObject {
+  var mesh: Color = Color.BLACK
 }
