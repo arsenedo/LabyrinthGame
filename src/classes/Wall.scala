@@ -7,8 +7,14 @@ import java.awt.Color
 class Wall extends IStaticObject {
   mesh = Color.pink
 
+  override def isLandingAllowed: Boolean = false
+
   override def requestAssignMovableObject(IMovableObject: IMovableObject): Boolean = {
     // A wall can't assign a movable object
     false
+  }
+
+  override def discardMovableObject: Unit = {
+    containedObject = None
   }
 }
