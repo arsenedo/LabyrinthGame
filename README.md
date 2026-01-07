@@ -86,3 +86,10 @@ Here are some important branches and their roles:
 2. When the feature is done, squash commits and note everything that is important into the commit message
 3. After rebasing on dev, squashing the commits, you can finally merge your branch into ``dev``
 4. Merging into ``main`` is allowed only on agreement with all team members
+
+# Start Working with IntelliJ
+1. Clone project and open with IntelliJ Ultimate
+2. Go to `File -> Project Structure -> Modules -> + (Add) -> New Module`
+3. Set the following Module setting ![img.png](assets/img.png)
+4. Right click on `funGraphics-*.jar` and click `Add As Library...`
+5. You're all set! Happy coding
