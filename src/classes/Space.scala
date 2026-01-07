@@ -9,8 +9,6 @@ class Space extends IStaticObject {
 
   var playerLanded: Boolean = false;
 
-  override def isLandingAllowed: Boolean = containedObject.isEmpty
-
   override def requestAssignMovableObject(IMovableObject: IMovableObject): Boolean = {
     if (containedObject.isEmpty) {
       containedObject = Some(IMovableObject)
@@ -20,6 +18,9 @@ class Space extends IStaticObject {
       }
       true
     } else {
+      // Collision!
+      containedObject.get.isHit = true;
+      IMovableObject.isHit = true;
       false
     }
   }

@@ -9,6 +9,8 @@ object MovementDirection extends Enumeration {
 }
 
 trait IMovableObject extends GameObject{
+  val position: Position
   var movementDirection: MovementDirection.Direction
   var isMoving: Boolean
+  var isHit: Boolean
 }

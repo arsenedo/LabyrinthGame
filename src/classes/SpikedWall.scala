@@ -4,11 +4,12 @@ import interfaces.{IMovableObject, IStaticObject}
 
 import java.awt.Color
 
-class Wall extends IStaticObject {
-  mesh = Color.pink
+class SpikedWall extends IStaticObject {
+  mesh = Color.DARK_GRAY
 
   override def requestAssignMovableObject(IMovableObject: IMovableObject): Boolean = {
-    // A wall can't assign a movable object
+    IMovableObject.isHit = true;
+
     false
   }
 

@@ -1,7 +1,7 @@
 import `abstract`.GameObject
-import classes.{Player, Space, Wall}
+import classes.{Bullet, GunWall, Player, Space, SpikedWall, Wall}
 import hevs.graphics.FunGraphics
-import interfaces.{IStaticObject, MovementDirection}
+import interfaces.{IMovableObject, IStaticObject, MovementDirection}
 
 import java.awt.Dimension
 import java.awt.event.{KeyEvent, KeyListener}
@@ -9,6 +9,8 @@ import javax.swing.{JDialog, JOptionPane, UIManager}
 
 object Game extends App {
   val f = new FunGraphics(1000, 1000)
+
+  var frame = 0;
 
   var gameArray: Array[Array[IStaticObject]] = Array.empty
 
@@ -18,17 +20,18 @@ object Game extends App {
     gameArray = Array(
       Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
       Array(new Wall,   new Space,  new Space,  new Space,  new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new GunWall(MovementDirection.Left),   new Space,  new Wall),
       Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Space,  new Wall),
       Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall),
       Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall),
       Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Space,  new Wall,   new Space,  new Wall),
       Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new SpikedWall,   new Space,  new Wall),
       Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
     )
 
     player.movementDirection = MovementDirection.Stationary
+    player.isHit = false
     player.position.setPosition(1, 1)
 
     gameArray(player.position.y)(player.position.x).requestAssignMovableObject(player)
@@ -42,7 +45,14 @@ object Game extends App {
 
     for ((row, i) <- gameArray.zipWithIndex) {
       for ((space, j) <- row.zipWithIndex) {
-        f.setColor(space.mesh)
+        val containedObjectOption: Option[IMovableObject] = space.getContainedObject
+
+        if (containedObjectOption.isDefined) {
+          f.setColor(containedObjectOption.get.mesh)
+        } else {
+          f.setColor(space.mesh)
+        }
+
         f.drawFillRect(
           gameTopLeft(0) + j * gameGridSize,
           gameTopLeft(1) + i * gameGridSize,
@@ -50,13 +60,32 @@ object Game extends App {
           gameGridSize)
       }
     }
+  }
 
-    f.setColor(player.mesh)
-    f.drawFillRect(
-      gameTopLeft(0) + player.position.x * gameGridSize,
-      gameTopLeft(1) + player.position.y * gameGridSize,
-      gameGridSize,
-      gameGridSize)
+  def spawnBullets(): Unit = {
+    val gunWalls: Array[GunWall] = gameArray.flatten
+      .filter((staticObject) => staticObject.isInstanceOf[GunWall])
+      .map((space) => space.asInstanceOf[GunWall])
+
+    gunWalls.foreach((gunWall) => {
+      val bulletOption: Option[Bullet] = gunWall.spawnBullet(frame)
+
+      if (bulletOption.isDefined) {
+        val bullet = bulletOption.get
+
+        var gunWallPosX = 7
+        var gunWallPosY = 2
+        bullet.movementDirection match {
+          case MovementDirection.Up => gunWallPosY -= 1
+          case MovementDirection.Right => gunWallPosX += 1
+          case MovementDirection.Down => gunWallPosY += 1
+          case MovementDirection.Left => gunWallPosX -= 1
+        }
+
+        bullet.position.setPosition(gunWallPosX, gunWallPosY)
+        gameArray(gunWallPosY)(gunWallPosX).requestAssignMovableObject(bullet)
+      }
+    })
   }
 
   def movePlayer(): Unit = {
@@ -76,8 +105,7 @@ object Game extends App {
     previousSpace.discardMovableObject // As the player wants to get out, we discard him from the old space
     val newSpace: IStaticObject = gameArray(playerPosition.y + movementDirection(1))(playerPosition.x + movementDirection(0))
 
-    if (newSpace.isLandingAllowed) {
-      newSpace.requestAssignMovableObject(player)
+    if (newSpace.requestAssignMovableObject(player)) {
       playerPosition.y += movementDirection(1)
       playerPosition.x += movementDirection(0)
     } else {
@@ -86,6 +114,42 @@ object Game extends App {
       previousSpace.requestAssignMovableObject(player) // The player is reassigned to the old space in case he can't move further
     }
   }
+
+  def moveBullets(): Unit = {
+    val bullets: Array[Bullet] = gameArray.flatten.filter((space) => {
+      val containedObjectOption = space.getContainedObject
+
+      if (containedObjectOption.isDefined) containedObjectOption.get.isInstanceOf[Bullet] else false
+    }).map((space) => space.getContainedObject.get.asInstanceOf[Bullet])
+
+    bullets.foreach((bullet) => {
+      val bulletPosition = bullet.position
+      val movementDirection = Array[Int](0, 0)
+
+      bullet.movementDirection match {
+        case MovementDirection.Up => movementDirection(1) = -1
+        case MovementDirection.Down => movementDirection(1) = 1
+        case MovementDirection.Left => movementDirection(0) = -1
+        case MovementDirection.Right => movementDirection(0) = 1
+      }
+
+      bullet.isMoving = true
+      val previousSpace: IStaticObject = gameArray(bulletPosition.y)(bulletPosition.x)
+      previousSpace.discardMovableObject // As the player wants to get out, we discard him from the old space
+      val newSpace: IStaticObject = gameArray(bulletPosition.y + movementDirection(1))(bulletPosition.x + movementDirection(0))
+
+      if (newSpace.requestAssignMovableObject(bullet)) {
+        bulletPosition.y += movementDirection(1)
+        bulletPosition.x += movementDirection(0)
+      } else {
+        bullet.movementDirection = MovementDirection.Stationary
+        bullet.isMoving = false
+        // Bullet is simply destroyed
+      }
+    })
+
+  }
+
   def setupGameListener(): Unit = {
     val keyListener = new KeyListener {
       override def keyPressed(e: KeyEvent): Unit = {
@@ -108,6 +172,11 @@ object Game extends App {
   }
 
   def checkGameCompletion(): Unit = {
+    if (player.isHit) {
+      initiateDefeat()
+      return
+    }
+
     val spaces: Array[Space] = gameArray.flatten
       .filter((staticObject) => staticObject.isInstanceOf[Space])
       .map((space) => space.asInstanceOf[Space])
@@ -120,28 +189,55 @@ object Game extends App {
   }
 
   def initiateEndgame(): Unit = {
-    val optionPane: JOptionPane = new JOptionPane("Well done! Would you like to go to the next level?", JOptionPane.INFORMATION_MESSAGE, JOptionPane.YES_NO_OPTION)
-    val dialog: JDialog = optionPane.createDialog(f.mainFrame, "Level completed!");
-    dialog.setVisible(true)
+    Utilities.generateYesNoJOptionPane(
+      f.mainFrame,
+      "Level completed!",
+      "Well done! Would you like to go to the next level?",
+      JOptionPane.INFORMATION_MESSAGE,
+      JOptionPane.YES_NO_OPTION,
+      (selectedValue) => {
+        if (selectedValue == JOptionPane.YES_OPTION) {
+          setupLevel()
+        } else {
+          System.exit(0);
+        }
+      }
+    )
+  }
 
-    val selectedValue: Object = optionPane.getValue();
-
-    if (selectedValue == JOptionPane.YES_OPTION) {
-      setupLevel()
-    } else {
-      System.exit(0);
-    }
+  def initiateDefeat(): Unit = {
+    Utilities.generateYesNoJOptionPane(
+      f.mainFrame,
+      "Skill issue!",
+      "Bruh you dead! Would you like to try again?",
+      JOptionPane.ERROR_MESSAGE,
+      JOptionPane.YES_NO_OPTION,
+      (selectedValue) => {
+        if (selectedValue == JOptionPane.YES_OPTION) {
+          setupLevel()
+        } else {
+          System.exit(0);
+        }
+      }
+    )
   }
 
   setupGameListener()
 
   setupLevel()
   while(true) {
+    frame += 1
+
     movePlayer()
+
+    moveBullets()
+
+    spawnBullets()
+
     draw()
 
     checkGameCompletion()
 
-    f.syncGameLogic(20)
+    f.syncGameLogic(30)
   }
 }

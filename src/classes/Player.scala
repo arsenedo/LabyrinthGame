@@ -10,6 +10,7 @@ class Player(x: Int, y: Int) extends IMovableObject {
 
   override var movementDirection: Direction = MovementDirection.Stationary
   override var isMoving: Boolean = false
+  override var isHit: Boolean = false
 
   mesh = Color.RED
 }
