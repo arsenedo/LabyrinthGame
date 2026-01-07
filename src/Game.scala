@@ -3,26 +3,36 @@ import classes.{Player, Space, Wall}
 import hevs.graphics.FunGraphics
 import interfaces.{IStaticObject, MovementDirection}
 
+import java.awt.Dimension
 import java.awt.event.{KeyEvent, KeyListener}
+import javax.swing.{JDialog, JOptionPane, UIManager}
 
 object Game extends App {
   val f = new FunGraphics(1000, 1000)
 
-  val gameArray: Array[Array[IStaticObject]] = Array(
-    Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
-    Array(new Wall,   new Space,  new Space,  new Space,  new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
-    Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
-  )
+  var gameArray: Array[Array[IStaticObject]] = Array.empty
 
-  val player = new Player(1, 1)
-  gameArray(1)(1).requestAssignMovableObject(player)
+  val player = new Player(0, 0)
+
+  def setupLevel(): Unit = {
+    gameArray = Array(
+      Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
+      Array(new Wall,   new Space,  new Space,  new Space,  new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
+      Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
+    )
+
+    player.movementDirection = MovementDirection.Stationary
+    player.position.setPosition(1, 1)
+
+    gameArray(player.position.y)(player.position.x).requestAssignMovableObject(player)
+  }
 
   def draw(): Unit = {
     f.clear()
@@ -97,11 +107,40 @@ object Game extends App {
     f.setKeyManager(keyListener)
   }
 
+  def checkGameCompletion(): Unit = {
+    val spaces: Array[Space] = gameArray.flatten
+      .filter((staticObject) => staticObject.isInstanceOf[Space])
+      .map((space) => space.asInstanceOf[Space])
+
+    val clearedSpaces: Int = spaces.count((space) => space.playerLanded)
+
+    if (spaces.length == clearedSpaces) {
+      initiateEndgame()
+    }
+  }
+
+  def initiateEndgame(): Unit = {
+    val optionPane: JOptionPane = new JOptionPane("Well done! Would you like to go to the next level?", JOptionPane.INFORMATION_MESSAGE, JOptionPane.YES_NO_OPTION)
+    val dialog: JDialog = optionPane.createDialog(f.mainFrame, "Level completed!");
+    dialog.setVisible(true)
+
+    val selectedValue: Object = optionPane.getValue();
+
+    if (selectedValue == JOptionPane.YES_OPTION) {
+      setupLevel()
+    } else {
+      System.exit(0);
+    }
+  }
+
   setupGameListener()
 
+  setupLevel()
   while(true) {
     movePlayer()
     draw()
+
+    checkGameCompletion()
 
     f.syncGameLogic(20)
   }
