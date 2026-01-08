@@ -39,7 +39,7 @@ object LevelBuilder extends App {
       if (e.getKeyChar.toInt >= '0' && e.getKeyChar.toInt <= '7')
         current_key = e.getKeyChar.toInt
       if (e.getKeyChar.toInt == 'y')
-      CSVCreator(GameArray)
+        CSVCreator(GameArray)
     }
     override def keyPressed(e: KeyEvent): Unit = {}
     override def keyReleased(e: KeyEvent): Unit = {}
@@ -68,8 +68,8 @@ object LevelBuilder extends App {
     for(y <- 0 until 10) {
       f.drawLine(0, y * 100, 999, y * 100)
     }
-      for (x <- 0 until 10){
-        f.drawLine(x * 100, 0, x * 100, 999)
+    for (x <- 0 until 10){
+      f.drawLine(x * 100, 0, x * 100, 999)
     }
     for(y <- 0 until 10)
       for (x <- 0 until 10) {
@@ -120,9 +120,9 @@ object LevelBuilder extends App {
     var new_a : String = ""
     for (i <- a.indices) {
       for (j <- a(i).indices) {
-          new_a += a(i)(j)
-         // new_a += ","
-        }
+        new_a += a(i)(j)
+        // new_a += ","
+      }
       new_a += "\n"
     }
     var file_name : String = getFileName
@@ -131,6 +131,7 @@ object LevelBuilder extends App {
     try {
       val fs: FileOutputStream = new FileOutputStream("src/levels/" + file_name,true)
       val pw: PrintWriter = new PrintWriter(fs)
+      AddWall(e.getX, e.getY)
 
       pw.println(new_a)
       pw.close()
