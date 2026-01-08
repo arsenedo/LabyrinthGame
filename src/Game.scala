@@ -17,19 +17,8 @@ object Game extends App {
   val player = new Player(0, 0)
 
   def setupLevel(): Unit = {
-    gameArray = Array(
-      Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
-      Array(new Wall,   new Space,  new Space,  new Space,  new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new GunWall(MovementDirection.Left),   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Wall,   new Wall,   new Wall,   new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new Space,  new Wall,   new Space,  new Wall),
-      Array(new Wall,   new Wall,   new Space,  new Space,  new Space,  new Space,  new Space,  new SpikedWall,   new Space,  new Wall),
-      Array(new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall,   new Wall),
-    )
 
+    gameArray = LevelBuilder.ImportLevel("level_2")
     player.movementDirection = MovementDirection.Stationary
     player.isHit = false
     player.position.setPosition(1, 1)
