@@ -1,69 +1,111 @@
-import `abstract`.GameObject
-import classes.{Bullet, GunWall, Player, Space, SpikedWall, Wall}
+import classes.{AudioManager, Bullet, GunWall, Player, Space, SpikedWall, Wall}
 import hevs.graphics.FunGraphics
-import interfaces.{IMovableObject, IStaticObject, MovementDirection}
+import hevs.graphics.utils.GraphicsBitmap
+import `abstract`.{MovableObject, MovementDirection, StaticObject}
 
-import java.awt.Dimension
+import java.awt.Color
 import java.awt.event.{KeyEvent, KeyListener}
-import javax.swing.{JDialog, JOptionPane, UIManager}
+import javax.swing.JOptionPane
 
 object Game extends App {
   val f = new FunGraphics(1000, 1000)
 
-  var frame = 0;
+  private var frame = 0
 
-  var gameArray: Array[Array[IStaticObject]] = Array.empty
+  private var level_id = 1
+  private val levels_count = 10
 
-  val player = new Player(0, 0)
+  private val gameGridSize = 100
 
-  def setupLevel(): Unit = {
+  private val audioManager = new AudioManager
 
-    gameArray = LevelBuilder.ImportLevel("level_2")
-    player.movementDirection = MovementDirection.Stationary
-    player.isHit = false
-    player.position.setPosition(1, 1)
+  private var gameArray: Array[Array[StaticObject]] = Array.empty
 
-    gameArray(player.position.y)(player.position.x).requestAssignMovableObject(player)
-  }
+  private val player = new Player
 
-  def draw(): Unit = {
-    f.clear()
+  private var playingAudio = "";
 
-    val gameTopLeft = Array[Int](0, 0)
-    val gameGridSize = 100
+  private def setupLevel(): Unit = {
+    // The game contains 10 levels,
+    // after completing level 10, the game ends and the end screen is shown
+    if (level_id <= levels_count) {
+      gameArray = LevelBuilder.ImportLevel(s"level_$level_id")
 
-    for ((row, i) <- gameArray.zipWithIndex) {
-      for ((space, j) <- row.zipWithIndex) {
-        val containedObjectOption: Option[IMovableObject] = space.getContainedObject
+      playAudio("/assets/sound/MainMusic.wav")
 
-        if (containedObjectOption.isDefined) {
-          f.setColor(containedObjectOption.get.mesh)
-        } else {
-          f.setColor(space.mesh)
-        }
+      player.movementDirection = MovementDirection.Stationary
+      player.isHit = false
 
-        f.drawFillRect(
-          gameTopLeft(0) + j * gameGridSize,
-          gameTopLeft(1) + i * gameGridSize,
-          gameGridSize,
-          gameGridSize)
-      }
+      gameArray(1)(1).requestAssignMovableObject(player)
+
+      drawOnce()
+    } else {
+      f.clear()
+
+      f.drawPicture(f.width / 2, f.height / 2, new GraphicsBitmap("/assets/img/tear_down_wall.jpg"))
+
+      playAudio("/assets/sound/Victory.wav")
+
+      f.drawFancyString(250, f.height / 2, "CONGRATULATIONS!!!1!11!!1!", Color.PINK, 35)
     }
   }
 
-  def spawnBullets(): Unit = {
-    val gunWalls: Array[GunWall] = gameArray.flatten
-      .filter((staticObject) => staticObject.isInstanceOf[GunWall])
-      .map((space) => space.asInstanceOf[GunWall])
+  private def playAudio(newAudio: String): Unit = {
+    if (newAudio != playingAudio) {
+      audioManager.playAudio(newAudio)
+      playingAudio = newAudio
+    }
+  }
 
-    gunWalls.foreach((gunWall) => {
+  private def drawOnce(): Unit = {
+    gameArray.flatten
+      .filter(staticObject => !staticObject.isInstanceOf[Space])
+      .foreach(wall => {
+        val position = wall.position
+        f.drawPicture(
+          position.x * gameGridSize + 50,
+          position.y * gameGridSize + 50,
+          wall.mesh
+        )
+      })
+  }
+
+  private def draw(): Unit = {
+    gameArray.flatten
+      .filter(staticObject => staticObject.isInstanceOf[Space])
+      .foreach(space => {
+      val position = space.position
+      val containedObjectOption = space.getContainedObject
+
+      f.drawPicture(
+        position.x * gameGridSize + 50,
+        position.y * gameGridSize + 50,
+        space.mesh
+      )
+
+      if (containedObjectOption.isDefined) {
+        f.drawPicture(
+          position.x * gameGridSize + 50,
+          position.y * gameGridSize + 50,
+          containedObjectOption.get.mesh
+        )
+      }
+    })
+  }
+
+  private def spawnBullets(): Unit = {
+    val gunWalls: Array[GunWall] = gameArray.flatten
+      .filter(staticObject => staticObject.isInstanceOf[GunWall])
+      .map(space => space.asInstanceOf[GunWall])
+
+    gunWalls.foreach(gunWall => {
       val bulletOption: Option[Bullet] = gunWall.spawnBullet(frame)
 
       if (bulletOption.isDefined) {
         val bullet = bulletOption.get
 
-        var gunWallPosX = 7
-        var gunWallPosY = 2
+        var gunWallPosX = gunWall.position.x
+        var gunWallPosY = gunWall.position.y
         bullet.movementDirection match {
           case MovementDirection.Up => gunWallPosY -= 1
           case MovementDirection.Right => gunWallPosX += 1
@@ -71,84 +113,61 @@ object Game extends App {
           case MovementDirection.Left => gunWallPosX -= 1
         }
 
-        bullet.position.setPosition(gunWallPosX, gunWallPosY)
         gameArray(gunWallPosY)(gunWallPosX).requestAssignMovableObject(bullet)
       }
     })
   }
 
-  def movePlayer(): Unit = {
-    val playerPosition = player.position
-    val movementDirection = Array[Int](0, 0)
+  private def moveObjects(): Unit = {
+    val spacesWithMovables = gameArray.flatten.filter(space => space.getContainedObject.isDefined)
 
-    player.movementDirection match {
-      case MovementDirection.Up => movementDirection(1) = -1
-      case MovementDirection.Down => movementDirection(1) = 1
-      case MovementDirection.Left => movementDirection(0) = -1
-      case MovementDirection.Right => movementDirection(0) = 1
-      case MovementDirection.Stationary => return
-    }
-
-    player.isMoving = true
-    val previousSpace: IStaticObject = gameArray(playerPosition.y)(playerPosition.x)
-    previousSpace.discardMovableObject // As the player wants to get out, we discard him from the old space
-    val newSpace: IStaticObject = gameArray(playerPosition.y + movementDirection(1))(playerPosition.x + movementDirection(0))
-
-    if (newSpace.requestAssignMovableObject(player)) {
-      playerPosition.y += movementDirection(1)
-      playerPosition.x += movementDirection(0)
-    } else {
-      player.movementDirection = MovementDirection.Stationary
-      player.isMoving = false
-      previousSpace.requestAssignMovableObject(player) // The player is reassigned to the old space in case he can't move further
-    }
-  }
-
-  def moveBullets(): Unit = {
-    val bullets: Array[Bullet] = gameArray.flatten.filter((space) => {
-      val containedObjectOption = space.getContainedObject
-
-      if (containedObjectOption.isDefined) containedObjectOption.get.isInstanceOf[Bullet] else false
-    }).map((space) => space.getContainedObject.get.asInstanceOf[Bullet])
-
-    bullets.foreach((bullet) => {
-      val bulletPosition = bullet.position
+    spacesWithMovables.foreach(space => {
       val movementDirection = Array[Int](0, 0)
 
-      bullet.movementDirection match {
+      val movableObject: MovableObject = space.getContainedObject.get
+      movableObject.movementDirection match {
         case MovementDirection.Up => movementDirection(1) = -1
         case MovementDirection.Down => movementDirection(1) = 1
         case MovementDirection.Left => movementDirection(0) = -1
         case MovementDirection.Right => movementDirection(0) = 1
+        case MovementDirection.Stationary =>
       }
 
-      bullet.isMoving = true
-      val previousSpace: IStaticObject = gameArray(bulletPosition.y)(bulletPosition.x)
-      previousSpace.discardMovableObject // As the player wants to get out, we discard him from the old space
-      val newSpace: IStaticObject = gameArray(bulletPosition.y + movementDirection(1))(bulletPosition.x + movementDirection(0))
+      movableObject.isMoving = true
 
-      if (newSpace.requestAssignMovableObject(bullet)) {
-        bulletPosition.y += movementDirection(1)
-        bulletPosition.x += movementDirection(0)
-      } else {
-        bullet.movementDirection = MovementDirection.Stationary
-        bullet.isMoving = false
-        // Bullet is simply destroyed
+      space.discardMovableObject()
+
+      val newSpace: StaticObject = gameArray(space.position.y + movementDirection(1))(space.position.x + movementDirection(0))
+
+      if (!newSpace.requestAssignMovableObject(movableObject)) {
+        movableObject.movementDirection = MovementDirection.Stationary
+        movableObject.isMoving = false
+
+        if (movableObject.isInstanceOf[Player]) {
+          space.requestAssignMovableObject(movableObject) // The movable object is reassigned to the old space if possible
+        }
       }
     })
-
   }
 
-  def setupGameListener(): Unit = {
+  private def setupGameListener(): Unit = {
     val keyListener = new KeyListener {
       override def keyPressed(e: KeyEvent): Unit = {
         if (player.movementDirection != MovementDirection.Stationary) return // If the player is in any other movement state, we do not want to update his movement
         e.getKeyCode match {
-          case KeyEvent.VK_UP => player.movementDirection = MovementDirection.Up
-          case KeyEvent.VK_DOWN => player.movementDirection = MovementDirection.Down
-          case KeyEvent.VK_LEFT => player.movementDirection = MovementDirection.Left
-          case KeyEvent.VK_RIGHT => player.movementDirection = MovementDirection.Right
-          case default => null
+          case KeyEvent.VK_UP =>
+            player.movementDirection = MovementDirection.Up
+            player.mesh = new GraphicsBitmap("/assets/img/PinkUp.png")
+          case KeyEvent.VK_DOWN =>
+            player.movementDirection = MovementDirection.Down
+            player.mesh = new GraphicsBitmap("/assets/img/PinkDown.png")
+          case KeyEvent.VK_LEFT =>
+            player.movementDirection = MovementDirection.Left
+            player.mesh = new GraphicsBitmap("/assets/img/PinkLeft.png")
+          case KeyEvent.VK_RIGHT =>
+            player.movementDirection = MovementDirection.Right
+            player.mesh = new GraphicsBitmap("/assets/img/PinkRight.png")
+          case _ =>
         }
       }
 
@@ -160,52 +179,54 @@ object Game extends App {
     f.setKeyManager(keyListener)
   }
 
-  def checkGameCompletion(): Unit = {
+  private def checkGameCompletion(): Unit = {
     if (player.isHit) {
       initiateDefeat()
       return
     }
 
     val spaces: Array[Space] = gameArray.flatten
-      .filter((staticObject) => staticObject.isInstanceOf[Space])
-      .map((space) => space.asInstanceOf[Space])
+      .filter(staticObject => staticObject.isInstanceOf[Space])
+      .map(space => space.asInstanceOf[Space])
 
-    val clearedSpaces: Int = spaces.count((space) => space.playerLanded)
+    val clearedSpaces: Int = spaces.count(space => space.playerLanded)
 
     if (spaces.length == clearedSpaces) {
       initiateEndgame()
     }
   }
 
-  def initiateEndgame(): Unit = {
+  private def initiateEndgame(): Unit = {
     Utilities.generateYesNoJOptionPane(
       f.mainFrame,
       "Level completed!",
       "Well done! Would you like to go to the next level?",
       JOptionPane.INFORMATION_MESSAGE,
       JOptionPane.YES_NO_OPTION,
-      (selectedValue) => {
+      selectedValue => {
         if (selectedValue == JOptionPane.YES_OPTION) {
+          level_id += 1
           setupLevel()
         } else {
-          System.exit(0);
+          System.exit(0)
         }
       }
     )
   }
 
-  def initiateDefeat(): Unit = {
+  private def initiateDefeat(): Unit = {
+    playAudio("/assets/sound/Loose.wav")
     Utilities.generateYesNoJOptionPane(
       f.mainFrame,
       "Skill issue!",
       "Bruh you dead! Would you like to try again?",
       JOptionPane.ERROR_MESSAGE,
       JOptionPane.YES_NO_OPTION,
-      (selectedValue) => {
+      selectedValue => {
         if (selectedValue == JOptionPane.YES_OPTION) {
           setupLevel()
         } else {
-          System.exit(0);
+          System.exit(0)
         }
       }
     )
@@ -214,19 +235,21 @@ object Game extends App {
   setupGameListener()
 
   setupLevel()
+
+  // Level ID is updated every time the player completes a level
+  // The game contains 10 levels, after level 10 the game should end
   while(true) {
     frame += 1
 
-    movePlayer()
+    if (level_id <= levels_count) {
+      moveObjects()
 
-    moveBullets()
+      spawnBullets()
 
-    spawnBullets()
+      draw()
 
-    draw()
-
-    checkGameCompletion()
-
-    f.syncGameLogic(30)
+      checkGameCompletion()
+    }
+      f.syncGameLogic(30)
   }
 }

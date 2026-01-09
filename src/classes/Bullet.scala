@@ -1,14 +1,21 @@
 package classes
 
-import interfaces.IMovableObject
-import interfaces.MovementDirection.Direction
+import `abstract`.{MovableObject, MovementDirection}
+import `abstract`.MovementDirection.Direction
+import hevs.graphics.utils.GraphicsBitmap
 
 import java.awt.Color
 
-class Bullet(x: Int, y: Int, override var movementDirection: Direction) extends IMovableObject {
-  val position: Position = new Position(x, y)
-  mesh = Color.yellow
+class Bullet(startingDirection: Direction) extends MovableObject {
+  movementDirection = startingDirection
 
-  override var isMoving: Boolean = true
-  override var isHit: Boolean = false
+  override var mesh: GraphicsBitmap = _
+
+  movementDirection match {
+    case MovementDirection.Left => mesh = new GraphicsBitmap("/assets/img/FireballLeft.png")
+    case MovementDirection.Up => mesh = new GraphicsBitmap("/assets/img/FireballUp.png")
+    case MovementDirection.Right => mesh = new GraphicsBitmap("/assets/img/FireballRight.png")
+    case MovementDirection.Down => mesh = new GraphicsBitmap("/assets/img/FireballDown.png")
+    case MovementDirection.Stationary => mesh = new GraphicsBitmap("/assets/img/FireballLeft.png")
+  }
 }

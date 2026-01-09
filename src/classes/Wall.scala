@@ -1,18 +1,10 @@
 package classes
 
-import interfaces.{IMovableObject, IStaticObject}
+import hevs.graphics.utils.GraphicsBitmap
+import `abstract`.{MovableObject, StaticObject}
 
 import java.awt.Color
 
-class Wall extends IStaticObject {
-  mesh = Color.pink
-
-  override def requestAssignMovableObject(IMovableObject: IMovableObject): Boolean = {
-    // A wall can't assign a movable object
-    false
-  }
-
-  override def discardMovableObject: Unit = {
-    containedObject = None
-  }
+class Wall(x: Int, y: Int) extends StaticObject(x, y) {
+  override var mesh: GraphicsBitmap = new GraphicsBitmap("/assets/img/Wall.png")
 }

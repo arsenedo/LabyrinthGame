@@ -1,7 +1,7 @@
-import `abstract`.GameObject
+import `abstract`.{GameObject, MovementDirection, StaticObject}
 import classes.{GunWall, Player, Space, SpikedWall, Wall}
 import hevs.graphics.FunGraphics
-import interfaces.{IStaticObject, MovementDirection}
+import hevs.graphics.utils.GraphicsBitmap
 
 import java.awt.{Color, Dimension, Rectangle, Shape}
 import java.awt.event.{KeyEvent, KeyListener, MouseEvent, MouseListener, MouseMotionListener}
@@ -62,7 +62,6 @@ object LevelBuilder extends App {
 
   f.setKeyManager(keyboard)
   f.addMouseListener(mouse)
-  ImportLevel("level_1")
 
   def Grid(): Unit = {
     for(y <- 0 until 10) {
@@ -71,14 +70,12 @@ object LevelBuilder extends App {
     for (x <- 0 until 10){
       f.drawLine(x * 100, 0, x * 100, 999)
     }
+    val wallMesh = new GraphicsBitmap("/assets/img/Wall.png")
     for(y <- 0 until 10)
       for (x <- 0 until 10) {
-        if (y == 0 || y == 9) {
+        if ((y == 0 || y == 9) || (x == 0 || x == 9)) {
           GameArray(x)(y) = 1
-          f.drawFillRect(x * 100,y * 100,100,100)
-        } else if (x == 0 || x == 9) {
-          GameArray(x)(y) = 1
-          f.drawFillRect(x * 100,y * 100,100,100)
+          f.drawPicture(x * 100 + 50, y * 100 + 50, wallMesh)
         }
       }
 
@@ -88,28 +85,27 @@ object LevelBuilder extends App {
     val y_round : Int = math.floor(y/100).toInt
 
     if (FillArray(current_key - 48,x_round, y_round)){
+      var mesh = new GraphicsBitmap("/assets/img/Path.png")
       current_key match {
-        case '0' => f.setColor(Color.WHITE)
-        case '1' => f.setColor(Color.BLACK)
-        case '2' => f.setColor(Color.ORANGE)
-        case '3' => f.setColor(Color.YELLOW)
-        case '4' => f.setColor(Color.YELLOW)
-        case '5' => f.setColor(Color.YELLOW)
-        case '6' => f.setColor(Color.YELLOW)
+        case '0' => mesh = new GraphicsBitmap("/assets/img/Path.png")
+        case '1' => mesh = new GraphicsBitmap("/assets/img/Wall.png")
+        case '2' => mesh = new GraphicsBitmap("/assets/img/SpikedWall.png")
+        case '3' => mesh = new GraphicsBitmap("/assets/img/GunWallLeft.png")
+        case '4' => mesh = new GraphicsBitmap("/assets/img/GunWallRight.png")
+        case '5' => mesh = new GraphicsBitmap("/assets/img/GunWallUp.png")
+        case '6' => mesh = new GraphicsBitmap("/assets/img/GunWallBottom.png")
       }
-      f.drawFillRect(x_round * 100,y_round * 100,100,100)
+      f.drawPicture(x_round * 100 + 50, y_round * 100 + 50, mesh)
       println("x " + math.floor(x/100).toInt)
       println("y " + math.floor(y/100).toInt)
     }
     println("x" + math.floor(x/100).toInt)
   }
   def FillArray(value: Int, x: Int, y:Int): Boolean = {
-    if (value == GameArray(x)(y))
-      return false
-    GameArray(x)(y) = value
+    GameArray(y)(x) = value
     for (i <- GameArray.indices) {
       for (j <- GameArray(i).indices){
-        print(GameArray(j)(i) + " ")
+        print(GameArray(j)(i).toString + " ")
       }
       println()
     }
@@ -131,7 +127,6 @@ object LevelBuilder extends App {
     try {
       val fs: FileOutputStream = new FileOutputStream("src/levels/" + file_name,true)
       val pw: PrintWriter = new PrintWriter(fs)
-      AddWall(e.getX, e.getY)
 
       pw.println(new_a)
       pw.close()
@@ -148,22 +143,22 @@ object LevelBuilder extends App {
     }
     "" //compilateur pas content
   }
-  def ImportLevel(filename : String) : Array[Array[IStaticObject]] = {
+  def ImportLevel(filename : String) : Array[Array[StaticObject]] = {
     try {
-      var gameArray: Array[Array[IStaticObject]] = Array.ofDim(10, 10)
+      var gameArray: Array[Array[StaticObject]] = Array.ofDim(10, 10)
       val fr = new FileReader("src/levels/" + filename)
       val inputReader = new BufferedReader(fr)
       for (y <- gameArray.indices) {
         var line = inputReader.readLine()
         for (x <- gameArray(y).indices){
           line(x) match {
-            case '0' => gameArray(x)(y) = new Space
-            case '1' => gameArray(x)(y) = new Wall
-            case '2' => gameArray(x)(y) = new SpikedWall
-            case '3' => gameArray(x)(y) = new GunWall(MovementDirection.Left)
-            case '4' => gameArray(x)(y) = new GunWall(MovementDirection.Right)
-            case '5' => gameArray(x)(y) = new GunWall(MovementDirection.Up)
-            case '6' => gameArray(x)(y) = new GunWall(MovementDirection.Down)
+            case '0' => gameArray(y)(x) = new Space(x, y)
+            case '1' => gameArray(y)(x) = new Wall(x, y)
+            case '2' => gameArray(y)(x) = new SpikedWall(x, y)
+            case '3' => gameArray(y)(x) = new GunWall(x, y, MovementDirection.Left)
+            case '4' => gameArray(y)(x) = new GunWall(x, y, MovementDirection.Right)
+            case '5' => gameArray(y)(x) = new GunWall(x, y, MovementDirection.Up)
+            case '6' => gameArray(y)(x) = new GunWall(x, y, MovementDirection.Down)
             case _ =>
           }
         }

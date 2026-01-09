@@ -1,19 +1,21 @@
 package classes
 
-import interfaces.{IMovableObject, IStaticObject}
+import hevs.graphics.utils.GraphicsBitmap
+import `abstract`.{MovableObject, StaticObject}
 
 import java.awt.Color
 
-class Space extends IStaticObject {
-  mesh = Color.BLUE
+class Space(x: Int, y: Int) extends StaticObject(x, y) {
+  override var mesh: GraphicsBitmap = new GraphicsBitmap("/assets/img/Space.jpg")
 
   var playerLanded: Boolean = false;
 
-  override def requestAssignMovableObject(IMovableObject: IMovableObject): Boolean = {
+  override def requestAssignMovableObject(IMovableObject: MovableObject): Boolean = {
     if (containedObject.isEmpty) {
       containedObject = Some(IMovableObject)
+
       if (IMovableObject.isInstanceOf[Player]) {
-        mesh = Color.GREEN
+        mesh = new GraphicsBitmap("/assets/img/Path.png")
         playerLanded = true
       }
       true
@@ -23,9 +25,5 @@ class Space extends IStaticObject {
       IMovableObject.isHit = true;
       false
     }
-  }
-
-  override def discardMovableObject(): Unit = {
-    containedObject = None
   }
 }

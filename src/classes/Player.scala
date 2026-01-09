@@ -1,16 +1,10 @@
 package classes
 
-import interfaces.MovementDirection.Direction
-import interfaces.{IMovableObject, MovementDirection}
+import hevs.graphics.utils.GraphicsBitmap
+import `abstract`.MovableObject
 
 import java.awt.Color
 
-class Player(x: Int, y: Int) extends IMovableObject {
-  val position: Position = new Position(x, y)
-
-  override var movementDirection: Direction = MovementDirection.Stationary
-  override var isMoving: Boolean = false
-  override var isHit: Boolean = false
-
-  mesh = Color.RED
+class Player() extends MovableObject {
+  var mesh: GraphicsBitmap = new GraphicsBitmap("/assets/img/PinkDown.png")
 }
